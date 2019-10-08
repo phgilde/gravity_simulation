@@ -53,7 +53,6 @@ def main():
         r = np.arange(a_.shape[0])
         a_[r, r] = 0, 0
         return np.sum(a_, axis=0)
-    print(autograph.to_code(a))
     # When two objects collide, their force and weight adds up
     def collision(m, p, v, n):
         for i in range(n):
