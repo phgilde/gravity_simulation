@@ -5,8 +5,7 @@ import numpy as np
 import pygame
 from visual import *
 from cnf import *
-import tensorflow as tf
-autograph = tf.contrib.autograph
+
 
 def main():
 
