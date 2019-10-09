@@ -96,12 +96,13 @@ def main():
     np.set_printoptions(suppress=True)
 
     while True:
-        surface.fill((0, 0, 0, bg_alpha))
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT: sys.exit()
 
 
         if not pause:
+            surface.fill((0, 0, 0, bg_alpha))
             m, x, v = collision(m, x, v, NUM_OF_BODIES)
             x_pre = cp(x)
             for i in range(move_without_render):
