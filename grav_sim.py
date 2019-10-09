@@ -106,8 +106,6 @@ def main():
             x_pre = cp(x)
             for i in range(move_without_render):
                 # m, x, v = collision(m, x, v)
-                
-                in_t = time.time()
 
                 k0 = t * v
                 l0 = t * a(x)
