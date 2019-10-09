@@ -88,12 +88,10 @@ def main():
 
 
     pygame.init()
-    size = WIDTH, HEIGHT
     pause = False
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     surface.convert()
-    font = pygame.font.SysFont('Arial', 16)
     screen.fill(BLACK)
     np.set_printoptions(suppress=True)
 
