@@ -3,32 +3,51 @@ import time
 
 import numpy as np
 import pygame
-from visual import *
-from cnf import *
+from visual import button
+from cnf import (
+    WIDTH,
+    HEIGHT,
+    NUM_OF_BODIES,
+    m0mass,
+    MIN_SIZE,
+    MAX_SIZE,
+    col_threshold,
+    BLACK,
+    bg_alpha,
+    lock0,
+    move_without_render,
+    t,
+)
+import cProfile
+
+import pstats
 
 
 def main():
-
+    n_bodies = NUM_OF_BODIES
     # Velocity
-    # v = np.random.uniform(low=-1, high=1,size=(NUM_OF_BODIES, 2))
-    v = np.zeros(shape=(NUM_OF_BODIES, 2))
+    # v = np.random.uniform(low=-1, high=1,size=(n_bodies, 2))
+    v = np.zeros(shape=(n_bodies, 2))
     v[0] = 0, 0
+    v[1] = 1.2, 0
+    v[2] = 1, 0
 
     # Position
-    x = np.random.uniform(low=10, high=WIDTH-10,size=(NUM_OF_BODIES, 2))
-    x[0] = WIDTH/2, HEIGHT/2
-
+    x = np.random.uniform(low=10, high=WIDTH - 10, size=(n_bodies, 2))
+    x[0] = WIDTH / 2, HEIGHT / 2
+    x[1] = WIDTH / 2, HEIGHT - 100
+    x[2] = WIDTH / 2, HEIGHT / 3
     # Mass
-    m = np.random.randint(MIN_SIZE,MAX_SIZE,size=NUM_OF_BODIES)
+    m = np.random.randint(MIN_SIZE, MAX_SIZE, size=n_bodies)
     m[0] = m0mass
-    
+
     # Color
-    color = np.random.randint(0, 255, size=(NUM_OF_BODIES, 3))
+    color = np.random.randint(0, 255, size=(n_bodies, 3))
     cp = np.copy
-    '''
+    """
     def a(x):
-        a_ = np.ndarray((NUM_OF_BODIES, 2))
-        for i in range(NUM_OF_BODIES):
+        a_ = np.ndarray((n_bodies, 2))
+        for i in range(n_bodies):
             d = x - x[i]
             a_i = (m.reshape(-1, 1) * (x - x[i]))\
                     /\
@@ -40,26 +59,28 @@ def main():
 
         a_[(a_[:,0]>max_acc) | (a_[:, 1]>max_acc)] = 0,0
         return a_
-    '''
+    """
+
     def a(x):
         x_j = x.reshape(-1, 1, 2)
         x_i = x.reshape(1, -1, 2)
         d = x_j - x_i
 
-        a_ = (m.reshape(-1, 1, 1) * (d))\
-                    /\
-                        (np.sqrt(d[:, :, 0]**2 + d[:, :, 1]**2) ** 3).reshape(NUM_OF_BODIES, NUM_OF_BODIES, 1)
+        a_ = (m.reshape(-1, 1, 1) * (d)) / (np.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3).reshape(
+            n_bodies, n_bodies, 1
+        )
         r = np.arange(a_.shape[0])
         a_[r, r] = 0, 0
         return np.sum(a_, axis=0)
+
     # When two objects collide, their force and weight adds up
     def collision(m, p, v, n):
         for i in range(n):
             if m[i] > 0:
-                diff = (p - p[i])
-                r = m[i] ** (1/3)
+                diff = p - p[i]
+                r = m[i] ** (1 / 3)
                 distance = np.linalg.norm(diff, axis=1)
-                collisions = (distance < (r * col_threshold)) & (m>0)
+                collisions = (distance < (r * col_threshold)) & (m > 0)
                 collisions[i] = False
                 m_col = m[collisions]
                 v_col = v[collisions]
@@ -70,7 +91,6 @@ def main():
                 m_i_pre = m[i]
 
                 m[i] += np.sum(m_col)
-
 
                 v[i] *= m_i_pre
 
@@ -85,7 +105,23 @@ def main():
 
         return m, p, v
 
+    def sim_runge_kutter(m, x, v, step):
+        k0 = step * v
+        l0 = step * a(x)
 
+        k1 = step * (v + l0 * 0.5)
+        l1 = step * a(x + k0 * 0.5)
+
+        k2 = step * (v + l1 * 0.5)
+        l2 = step * a(x + l1 * 0.5)
+
+        k3 = step * (v + l2)
+        l3 = step * a(x + k2)
+        x = x + (1 / 6) * (k0 + 2 * k1 + 2 * k2 + k3)
+
+        v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
+
+        return x, v
 
     pygame.init()
     pause = False
@@ -96,55 +132,41 @@ def main():
     np.set_printoptions(suppress=True)
 
     while True:
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: sys.exit()
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
 
         if not pause:
             surface.fill((0, 0, 0, bg_alpha))
-            m, x, v = collision(m, x, v, NUM_OF_BODIES)
+            m, x, v = collision(m, x, v, n_bodies)
             x_pre = cp(x)
             for i in range(move_without_render):
                 # m, x, v = collision(m, x, v)
 
-                k0 = t * v
-                l0 = t * a(x)
-
-                k1 = t * (v + l0 * 0.5)
-                l1 = t * a(x + k0 * 0.5)
-
-                k2 = t * (v + l1 * 0.5)
-                l2 = t * a(x + l1 * 0.5)
-
-                k3 = t * (v + l2)
-                l3 = t * a(x + k2)
-                x = (x + (1 / 6) * (k0 + 2*k1 + 2*k2 + k3))
-
-                v = v + (1. / 6) * (l0 + 2*l1 + 2*l2 + l3)
+                x, v = sim_runge_kutter(m, x, v, t)
                 # print(v[0] * m[0], v[1] * m[1])
             if lock0:
-                x = x - x[0] + (WIDTH/2, HEIGHT/2)
-            
+                x = x - x[0] + (WIDTH / 2, HEIGHT / 2)
+
             for i in range(x.shape[0]):
                 px, py = x[i]
                 px_p, py_p = x_pre[i]
                 if m[i] > 0 and x[i, 0] > 0 and x[i, 1] > 0:
-                    r = int(m[i] ** (1/3))
-                    pygame.draw.rect(surface, color[i], pygame.Rect(px-r/2, py-r/2, r,r))
+                    r = int(m[i] ** (1 / 3))
+                    pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
                     pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
-            
-        if button(surface,"PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
+
+        if button(surface, "PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
             print("pause", not pause)
             pause = not pause
             time.sleep(0.1)
-        
+
         screen.blit(surface, (0, 0))
         pygame.display.update()
 
-import cProfile
-cProfile.run('main()', 'restats')
 
-import pstats
-p = pstats.Stats('restats')
+cProfile.run("main()", "restats")
+
+p = pstats.Stats("restats")
 p.strip_dirs().sort_stats("time").print_stats(10)
