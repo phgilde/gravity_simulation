@@ -4,45 +4,29 @@ import time
 import numpy as np
 import pygame
 from visual import button
-from cnf import (
-    WIDTH,
-    HEIGHT,
-    NUM_OF_BODIES,
-    m0mass,
-    MIN_SIZE,
-    MAX_SIZE,
-    col_threshold,
-    BLACK,
-    bg_alpha,
-    lock0,
-    move_without_render,
-    t,
-)
+from cnf import WIDTH, HEIGHT, col_threshold, BLACK, bg_alpha, move_without_render, t, framerate, density
 import cProfile
 
 import pstats
 
+from environment import V, X, M, COLOR, DO_LOCK, LOCK
+
 
 def main():
-    n_bodies = NUM_OF_BODIES
+    lock = LOCK
+    n_bodies = M.shape[0]
+
     # Velocity
-    # v = np.random.uniform(low=-1, high=1,size=(n_bodies, 2))
-    v = np.zeros(shape=(n_bodies, 2))
-    v[0] = 0, 0
-    v[1] = 1.2, 0
-    v[2] = 1, 0
+    v = np.copy(V)
 
     # Position
-    x = np.random.uniform(low=10, high=WIDTH - 10, size=(n_bodies, 2))
-    x[0] = WIDTH / 2, HEIGHT / 2
-    x[1] = WIDTH / 2, HEIGHT - 100
-    x[2] = WIDTH / 2, HEIGHT / 3
+    x = np.copy(X)
+
     # Mass
-    m = np.random.randint(MIN_SIZE, MAX_SIZE, size=n_bodies)
-    m[0] = m0mass
+    m = np.copy(M)
 
     # Color
-    color = np.random.randint(0, 255, size=(n_bodies, 3))
+    color = np.copy(COLOR)
     cp = np.copy
     """
     def a(x):
@@ -130,30 +114,32 @@ def main():
     surface.convert()
     screen.fill(BLACK)
     np.set_printoptions(suppress=True)
+    clock = pygame.time.Clock()
 
     while True:
-
+        clock.tick(framerate)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
 
         if not pause:
             surface.fill((0, 0, 0, bg_alpha))
-            m, x, v = collision(m, x, v, n_bodies)
+            m, x, v, _ = collision(m, x, v, n_bodies, lock)
+            m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
             x_pre = cp(x)
             for i in range(move_without_render):
                 # m, x, v = collision(m, x, v)
 
                 x, v = sim_runge_kutter(m, x, v, t)
                 # print(v[0] * m[0], v[1] * m[1])
-            if lock0:
-                x = x - x[0] + (WIDTH / 2, HEIGHT / 2)
+            if DO_LOCK:
+                x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
 
             for i in range(x.shape[0]):
                 px, py = x[i]
                 px_p, py_p = x_pre[i]
                 if m[i] > 0 and x[i, 0] > 0 and x[i, 1] > 0:
-                    r = int(m[i] ** (1 / 3))
+                    r = int((m[i] ** (1 / 3)) * density)
                     pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
                     pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
 
