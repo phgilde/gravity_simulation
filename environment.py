@@ -1,6 +1,6 @@
 import numpy as np
 
-NUM_OF_BODIES = 500
+NUM_OF_BODIES = 50
 WIDTH = 800
 HEIGHT = 800
 
@@ -8,7 +8,7 @@ MIN_SIZE = 5
 MAX_SIZE = 6
 
 
-m0mass = 1
+m0mass = 100
 
 n_bodies = NUM_OF_BODIES
 # Velocity
@@ -29,5 +29,5 @@ M[0] = m0mass
 # Color
 COLOR = np.full([n_bodies, 3], 255)
 
-DO_LOCK = False
+DO_LOCK = True
 LOCK = 0
