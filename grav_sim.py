@@ -58,7 +58,7 @@ def main():
         return np.sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
-    def collision(m, p, v, n):
+    def collision(m, p, v, n, lock):
         for i in range(n):
             if m[i] > 0:
                 diff = p - p[i]
@@ -87,7 +87,10 @@ def main():
 
                 p[i] /= m[i]
 
-        return m, p, v
+                if lock in collisions:
+                    lock = i
+
+        return m, p, v, lock
 
     def sim_runge_kutter(m, x, v, step):
         k0 = step * v
