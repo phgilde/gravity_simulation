@@ -107,6 +107,14 @@ def main():
 
         return x, v
 
+    def kill_empty(m, x, v, n):
+        empty = m == 0
+        m = m[~empty]
+        x = x[~empty]
+        v = v[~empty]
+        n = np.sum(~empty)
+        return m, x, v, n
+
     pygame.init()
     pause = False
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
