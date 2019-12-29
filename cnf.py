@@ -15,3 +15,5 @@ max_acc = 50
 framerate = 60
 
 density = 1
+
+drag_coeff = 1

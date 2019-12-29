@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pygame
 from visual import button
-from cnf import WIDTH, HEIGHT, col_threshold, BLACK, bg_alpha, move_without_render, t, framerate, density
+from cnf import WIDTH, HEIGHT, col_threshold, BLACK, bg_alpha, move_without_render, t, framerate, density, drag_coeff
 import cProfile
 
 import pstats
@@ -144,7 +144,7 @@ def main():
             # simulate
             for i in range(move_without_render):
                 x, v = sim_runge_kutter(m, x, v, t)
-            
+            v = v * drag_coeff
             # change position of objects so locked object is always in the middle of the screen
             if DO_LOCK:
                 x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
