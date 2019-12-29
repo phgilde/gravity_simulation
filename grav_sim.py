@@ -135,14 +135,17 @@ def main():
 
         if not pause:
             surface.fill((0, 0, 0, bg_alpha))
+            # collide objects
             m, x, v, _ = collision(m, x, v, n_bodies, lock)
+            # remove mass=0 objects
             m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
-            x_pre = cp(x)
-            for i in range(move_without_render):
-                # m, x, v = collision(m, x, v)
 
+            x_pre = cp(x)
+            # simulate
+            for i in range(move_without_render):
                 x, v = sim_runge_kutter(m, x, v, t)
-                # print(v[0] * m[0], v[1] * m[1])
+            
+            # change position of objects so locked object is always in the middle of the screen
             if DO_LOCK:
                 x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
 
