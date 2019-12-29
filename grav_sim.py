@@ -149,6 +149,7 @@ def main():
             if DO_LOCK:
                 x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
 
+            # render objects
             for i in range(x.shape[0]):
                 px, py = x[i]
                 px_p, py_p = x_pre[i]
@@ -157,6 +158,7 @@ def main():
                     pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
                     pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
 
+        # pause button
         if button(surface, "PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
             print("pause", not pause)
             pause = not pause
