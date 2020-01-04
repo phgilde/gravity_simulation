@@ -10,9 +10,14 @@ import cProfile
 import pstats
 
 from environment import V, X, M, COLOR, DO_LOCK, LOCK
+from datetime import datetime
+
+import json
 
 
 def main():
+    now = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
+
     lock = LOCK
     n_bodies = M.shape[0]
 
@@ -28,22 +33,10 @@ def main():
     # Color
     color = np.copy(COLOR)
     cp = np.copy
-    """
-    def a(x):
-        a_ = np.ndarray((n_bodies, 2))
-        for i in range(n_bodies):
-            d = x - x[i]
-            a_i = (m.reshape(-1, 1) * (x - x[i]))\
-                    /\
-                        (np.sqrt(d[:, 0]**2 + d[:, 1]**2) ** 3).reshape(-1, 1)
-            
-            a_i[i] = 0
-            a_[i] = np.sum(a_i, axis=0)
-                    # print("Acceleration", a_[i], m[i])
 
-        a_[(a_[:,0]>max_acc) | (a_[:, 1]>max_acc)] = 0,0
-        return a_
-    """
+    all_x = []
+    all_m = []
+    all_color = []
 
     def a(x):
         x_j = x.reshape(-1, 1, 2)
@@ -131,6 +124,9 @@ def main():
         clock.tick(framerate)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                with open(f"simulations/{now}", "a") as f:
+                    json.dump({"x": all_x, "m": all_m, "c": all_color}, f)
+
                 sys.exit()
 
         if not pause:
@@ -158,6 +154,9 @@ def main():
                     pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
                     pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
 
+            all_x.append(x.astype(int).tolist())
+            all_m.append(m.astype(int).tolist())
+            all_color.append(color.astype(int).tolist())
         # pause button
         if button(surface, "PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
             print("pause", not pause)
