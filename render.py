@@ -4,27 +4,25 @@ import sys
 from cnfrender import (
     WIDTH,
     HEIGHT,
-    col_threshold,
     BLACK,
     bg_alpha,
     move_without_render,
-    t,
     framerate,
     density,
-    drag_coeff,
+    batch,
 )
-import time
-from visual import button
 import json
-from time import sleep, time
 import sqlite3
+import threading
+import queue
+import time
 
 pygame.init()
 if len(sys.argv) > 1:
     path = sys.argv[1]
 else:
     path = input()
-sleep(2)
+time.sleep(2)
 
 pause = False
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -34,24 +32,53 @@ screen.fill(BLACK)
 np.set_printoptions(suppress=True)
 clock = pygame.time.Clock()
 
-conn = sqlite3.connect(path)
-cur = conn.cursor()
+
+def load(ix):
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    result = cur.execute(
+        "SELECT x, m, color, x_pre FROM (SELECT x, m, color, x_pre FROM sim WHERE (ix, 0) in (SELECT ix, ix % ?)) LIMIT ? OFFSET ?",
+        (move_without_render, batch, ix),
+    )
+    res = result.fetchall()
+    conn.close()
+    return res
+
+
+def enthread(target, args):
+    q = queue.Queue()
+
+    def wrapper():
+        q.put(target(*args))
+
+    t = threading.Thread(target=wrapper)
+    t.start()
+    return q
+
 
 ix = 0
-while True:
+lst = load(ix)
+ix += batch
+q1 = enthread(load, (ix,))
 
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             conn.close()
             sys.exit()
+
     surface.fill((0, 0, 0, bg_alpha))
 
-    cur.execute("SELECT * FROM sim WHERE ix=?", (ix,))
-    result = cur.fetchone()
-    if not result:
+    if len(lst) == batch:
+        lst += q1.get()
+        ix += batch
+        q1 = enthread(load, (ix,))
+    try:
+        result = lst.pop(0)
+    except IndexError:
         break
-    ix += move_without_render
-    _, x, _, m, color, x_pre = result
+
+    x, m, color, x_pre = result
     x = json.loads(x)
     m = json.loads(m)
     color = json.loads(color)
@@ -73,5 +100,3 @@ while True:
     # print(i)
     screen.blit(surface, (0, 0))
     pygame.display.flip()
-
-conn.close()
