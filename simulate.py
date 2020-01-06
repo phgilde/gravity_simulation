@@ -4,19 +4,41 @@ import time
 import numpy as np
 import pygame
 from visual import button
-from cnf import WIDTH, HEIGHT, col_threshold, BLACK, bg_alpha, move_without_render, t, framerate, density, drag_coeff
+from cnf import (
+    max_steps,
+    WIDTH,
+    HEIGHT,
+    col_threshold,
+    BLACK,
+    bg_alpha,
+    move_without_render,
+    t,
+    framerate,
+    density,
+    drag_coeff,
+    min_bodies,
+    save_steps,
+)
 import cProfile
 
 import pstats
 
 from environment import V, X, M, COLOR, DO_LOCK, LOCK
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import json
+import gzip
+import sqlite3
 
 
 def main():
     now = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
+
+    # create database
+    conn = sqlite3.connect(f"simulations/{now}")
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE sim (ix INT PRIMARYKEY, x JSON, v JSON, m JSON, color JSON, x_pre JSON)")
+    conn.commit()
 
     lock = LOCK
     n_bodies = M.shape[0]
@@ -34,9 +56,7 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
-    all_x = []
-    all_m = []
-    all_color = []
+    first = True
 
     def a(x):
         x_j = x.reshape(-1, 1, 2)
@@ -120,13 +140,18 @@ def main():
     np.set_printoptions(suppress=True)
     clock = pygame.time.Clock()
 
-    while True:
+    start = time.time()
+    last = start
+    steps = 0
+
+    while (steps < max_steps) and (n_bodies >= min_bodies):
         clock.tick(framerate)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                with open(f"simulations/{now}", "a") as f:
-                    json.dump({"x": all_x, "m": all_m, "c": all_color}, f)
-
+                print("\nSaving...")
+                conn.commit()
+                print("Done!")
+                conn.close()
                 sys.exit()
 
         if not pause:
@@ -153,10 +178,31 @@ def main():
                     r = int((m[i] ** (1 / 3)) * density)
                     pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
                     pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
+            # put state into database
+            cur.execute(
+                "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    steps,
+                    json.dumps(x.tolist()),
+                    json.dumps(v.tolist()),
+                    json.dumps(m.tolist()),
+                    json.dumps(color.tolist()),
+                    json.dumps(x_pre.tolist()),
+                ),
+            )
+            print(
+                "{:>6} {} {}".format(
+                    steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start)
+                ),
+                end="\r",
+            )
+            last = time.time()
+            steps += 1
+            if steps % save_steps == 0:
+                print("\nAutosaving...")
+                conn.commit()
+                print("Done!")
 
-            all_x.append(x.astype(int).tolist())
-            all_m.append(m.astype(int).tolist())
-            all_color.append(color.astype(int).tolist())
         # pause button
         if button(surface, "PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
             print("pause", not pause)
@@ -165,6 +211,11 @@ def main():
 
         screen.blit(surface, (0, 0))
         pygame.display.update()
+
+    print("Saving...")
+    conn.commit()
+    print("Done!")
+    conn.close()
 
 
 cProfile.run("main()", "restats")

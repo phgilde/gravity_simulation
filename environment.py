@@ -12,7 +12,7 @@ m0mass = 5
 
 n_bodies = NUM_OF_BODIES
 # Velocity
-V = np.random.uniform(low=-0.5, high=0.5, size=(n_bodies, 2))
+V = np.random.uniform(low=-1, high=1, size=(n_bodies, 2))
 # V = np.zeros(shape=(n_bodies, 2))
 V[0] = 0, 0
 
