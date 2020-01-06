@@ -1,20 +1,13 @@
-import sys
 import time
 
 import numpy as np
-import pygame
-from visual import button
 from cnf import (
     max_steps,
     WIDTH,
     HEIGHT,
     col_threshold,
-    BLACK,
-    bg_alpha,
     move_without_render,
     t,
-    framerate,
-    density,
     drag_coeff,
     min_bodies,
     save_steps,
@@ -27,7 +20,6 @@ from environment import V, X, M, COLOR, DO_LOCK, LOCK
 from datetime import datetime, timedelta
 
 import json
-import gzip
 import sqlite3
 
 
@@ -35,7 +27,7 @@ def main():
     now = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
     # create database
-    conn = sqlite3.connect(f"simulations/{now}")
+    conn = sqlite3.connect(f"D:/simulations/{now}")
     cur = conn.cursor()
     cur.execute("CREATE TABLE sim (ix INT PRIMARYKEY, x JSON, v JSON, m JSON, color JSON, x_pre JSON)")
     conn.commit()
@@ -56,7 +48,6 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
-    first = True
 
     def a(x):
         x_j = x.reshape(-1, 1, 2)
@@ -131,86 +122,54 @@ def main():
         n = np.sum(~empty)
         return m, x, v, n
 
-    pygame.init()
-    pause = False
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    surface.convert()
-    screen.fill(BLACK)
     np.set_printoptions(suppress=True)
-    clock = pygame.time.Clock()
 
     start = time.time()
     last = start
     steps = 0
 
     while (steps < max_steps) and (n_bodies >= min_bodies):
-        clock.tick(framerate)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                print("\nSaving...")
-                conn.commit()
-                print("Done!")
-                conn.close()
-                sys.exit()
 
-        if not pause:
-            surface.fill((0, 0, 0, bg_alpha))
-            # collide objects
-            m, x, v, _ = collision(m, x, v, n_bodies, lock)
-            # remove mass=0 objects
-            m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
+        # collide objects
+        m, x, v, _ = collision(m, x, v, n_bodies, lock)
+        # remove mass=0 objects
+        m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
-            x_pre = cp(x)
-            # simulate
-            for i in range(move_without_render):
-                x, v = sim_runge_kutter(m, x, v, t)
-            v = v * drag_coeff
-            # change position of objects so locked object is always in the middle of the screen
-            if DO_LOCK:
-                x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
+        x_pre = cp(x)
+        # simulate
+        x, v = sim_runge_kutter(m, x, v, t)
+        v = v * drag_coeff
 
-            # render objects
-            for i in range(x.shape[0]):
-                px, py = x[i]
-                px_p, py_p = x_pre[i]
-                if m[i] > 0 and x[i, 0] > 0 and x[i, 1] > 0:
-                    r = int((m[i] ** (1 / 3)) * density)
-                    pygame.draw.rect(surface, color[i], pygame.Rect(px - r / 2, py - r / 2, r, r))
-                    pygame.draw.line(surface, color[i], (px, py), (px_p, py_p), r)
-            # put state into database
+        # change position of objects so locked object is always in the middle of the screen
+        if DO_LOCK:
+            x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
+        # put state into database
+        if steps % move_without_render == 0:
             cur.execute(
                 "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     steps,
-                    json.dumps(x.tolist()),
-                    json.dumps(v.tolist()),
-                    json.dumps(m.tolist()),
-                    json.dumps(color.tolist()),
-                    json.dumps(x_pre.tolist()),
+                    json.dumps(v.astype(int).tolist()),
+                    json.dumps(x.astype(int).tolist()),
+                    json.dumps(m.astype(int).tolist()),
+                    json.dumps(color.astype(int).tolist()),
+                    json.dumps(x_pre.astype(int).tolist()),
                 ),
             )
-            print(
-                "{:>6} {} {}".format(
-                    steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start)
-                ),
-                end="\r",
-            )
-            last = time.time()
-            steps += 1
-            if steps % save_steps == 0:
-                print("\nAutosaving...")
-                conn.commit()
-                print("Done!")
+        print(
+            "{:>6} {} {}".format(
+                steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start)
+            ),
+            end="\r",
+        )
+        last = time.time()
+        steps += 1
+        if steps % save_steps == 0:
+            print("\nAutosaving...")
+            conn.commit()
+            print("Done!")
 
         # pause button
-        if button(surface, "PAUSE", 5, 5, 80, 20, (50, 50, 50, 100), (100, 100, 100, 100)):
-            print("pause", not pause)
-            pause = not pause
-            time.sleep(0.1)
-
-        screen.blit(surface, (0, 0))
-        pygame.display.update()
 
     print("Saving...")
     conn.commit()
@@ -222,3 +181,6 @@ cProfile.run("main()", "restats")
 
 p = pstats.Stats("restats")
 p.strip_dirs().sort_stats("time").print_stats(10)
+
+
+
