@@ -149,8 +149,8 @@ def main():
                 "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     steps,
-                    json.dumps(v.astype(int).tolist()),
                     json.dumps(x.astype(int).tolist()),
+                    json.dumps(v.astype(int).tolist()),
                     json.dumps(m.astype(int).tolist()),
                     json.dumps(color.astype(int).tolist()),
                     json.dumps(x_pre.astype(int).tolist()),
