@@ -127,7 +127,7 @@ def main():
     start = time.time()
     last = start
     steps = 0
-
+    try:
     while (steps < max_steps) and (n_bodies >= min_bodies):
 
         # collide objects
@@ -170,7 +170,7 @@ def main():
             print("Done!")
 
         # pause button
-
+    finally:
     print("Saving...")
     conn.commit()
     print("Done!")
