@@ -11,6 +11,8 @@ from cnf import (
     drag_coeff,
     min_bodies,
     save_steps,
+    log_path,
+    do_log
 )
 import cProfile
 
@@ -162,6 +164,13 @@ def main():
             ),
             end="\r",
         )
+            if do_log:
+                with open(log_path.format(now), "a") as f:
+                    f.write(
+                        "{},{},{},{}\n".format(
+                            steps, time.time() - last, time.time(), n_bodies
+                        )
+                    )
         last = time.time()
         steps += 1
         if steps % save_steps == 0:
