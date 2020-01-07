@@ -72,6 +72,7 @@ while True:
     if len(lst) == batch:
         lst += q1.get()
         ix += batch
+        print("{}        ".format(ix))
         q1 = enthread(load, (ix,))
     try:
         result = lst.pop(0)
@@ -100,3 +101,4 @@ while True:
     # print(i)
     screen.blit(surface, (0, 0))
     pygame.display.flip()
+    
