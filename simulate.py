@@ -11,6 +11,7 @@ from cnf import (
     drag_coeff,
     min_bodies,
     save_steps,
+    path,
     log_path,
     do_log
 )
@@ -29,7 +30,7 @@ def main():
     now = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
     # create database
-    conn = sqlite3.connect(f"D:/simulations/{now}")
+    conn = sqlite3.connect(path.format(now))
     cur = conn.cursor()
     cur.execute("CREATE TABLE sim (ix INT PRIMARYKEY, x JSON, v JSON, m JSON, color JSON, x_pre JSON)")
     conn.commit()
@@ -49,7 +50,6 @@ def main():
     # Color
     color = np.copy(COLOR)
     cp = np.copy
-
 
     def a(x):
         x_j = x.reshape(-1, 1, 2)
@@ -130,40 +130,40 @@ def main():
     last = start
     steps = 0
     try:
-    while (steps < max_steps) and (n_bodies >= min_bodies):
+        while (steps < max_steps) and (n_bodies >= min_bodies):
 
-        # collide objects
-        m, x, v, _ = collision(m, x, v, n_bodies, lock)
-        # remove mass=0 objects
-        m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
+            # collide objects
+            m, x, v, _ = collision(m, x, v, n_bodies, lock)
+            # remove mass=0 objects
+            m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
-        x_pre = cp(x)
-        # simulate
-        x, v = sim_runge_kutter(m, x, v, t)
-        v = v * drag_coeff
+            x_pre = cp(x)
+            # simulate
+            x, v = sim_runge_kutter(m, x, v, t)
+            v = v * drag_coeff
 
-        # change position of objects so locked object is always in the middle of the screen
-        if DO_LOCK:
-            x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
-        # put state into database
-        if steps % move_without_render == 0:
-            cur.execute(
-                "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    steps,
-                    json.dumps(x.astype(int).tolist()),
-                    json.dumps(v.astype(int).tolist()),
-                    json.dumps(m.astype(int).tolist()),
-                    json.dumps(color.astype(int).tolist()),
-                    json.dumps(x_pre.astype(int).tolist()),
-                ),
-            )
-        print(
+            # change position of objects so locked object is always in the middle of the screen
+            if DO_LOCK:
+                x = x - x[lock] + (WIDTH / 2, HEIGHT / 2)
+            # put state into database
+            if steps % move_without_render == 0:
+                cur.execute(
+                    "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        steps,
+                        json.dumps(x.astype(int).tolist()),
+                        json.dumps(v.astype(int).tolist()),
+                        json.dumps(m.astype(int).tolist()),
+                        json.dumps(color.astype(int).tolist()),
+                        json.dumps(x_pre.astype(int).tolist()),
+                    ),
+                )
+            print(
                 "{:>10} {} {} {}           ".format(
                     steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start), n_bodies
-            ),
-            end="\r",
-        )
+                ),
+                end="\r",
+            )
             if do_log:
                 with open(log_path.format(now), "a") as f:
                     f.write(
@@ -171,25 +171,23 @@ def main():
                             steps, time.time() - last, time.time(), n_bodies
                         )
                     )
-        last = time.time()
-        steps += 1
-        if steps % save_steps == 0:
-            print("\nAutosaving...")
-            conn.commit()
-            print("Done!")
+            last = time.time()
+            steps += 1
+            if steps % save_steps == 0:
+                print("\nAutosaving...")
+                conn.commit()
+                print("Done!")
 
-        # pause button
+            # pause button
     finally:
-    print("Saving...")
-    conn.commit()
-    print("Done!")
-    conn.close()
+        print("Saving...")
+        conn.commit()
+        print("Done!")
+        conn.close()
 
 
 cProfile.run("main()", "restats")
 
 p = pstats.Stats("restats")
 p.strip_dirs().sort_stats("time").print_stats(10)
-
-
 
