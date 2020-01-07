@@ -157,8 +157,8 @@ def main():
                 ),
             )
         print(
-            "{:>6} {} {}".format(
-                steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start)
+                "{:>10} {} {} {}           ".format(
+                    steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start), n_bodies
             ),
             end="\r",
         )
