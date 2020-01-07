@@ -72,7 +72,7 @@ while True:
     if len(lst) == batch:
         lst += q1.get()
         ix += batch
-        print("{}        ".format(ix))
+        print("{}        ".format(ix*move_without_render))
         q1 = enthread(load, (ix,))
     try:
         result = lst.pop(0)
