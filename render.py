@@ -4,7 +4,6 @@ import sys
 from cnfrender import (
     WIDTH,
     HEIGHT,
-    BLACK,
     bg_alpha,
     move_without_render,
     framerate,
@@ -16,6 +15,8 @@ import sqlite3
 import threading
 import queue
 import time
+
+BLACK = (0, 0, 0)
 
 pygame.init()
 if len(sys.argv) > 1:
