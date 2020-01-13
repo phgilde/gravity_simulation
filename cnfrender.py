@@ -1,23 +1,17 @@
-NUM_OF_BODIES = 3
+# screen shape
 WIDTH = 800
 HEIGHT = 800
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BLUE = (109, 196, 255)
-t = 0.001
-move_without_render = 25
 
-col_threshold = 2
-bg_alpha = 100
+# render every nth frame
+move_without_render = 10
 
-max_acc = 50
+# particle tail
+bg_alpha = 1
 
+# max framerate
 framerate = 60
 
 density = 1
 
-drag_coeff = 1
-
-max_steps = 2000
-
+# load n frames at once
 batch = 200
