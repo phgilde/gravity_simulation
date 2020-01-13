@@ -3,8 +3,6 @@ import time
 import numpy as np
 from cnf import (
     max_steps,
-    WIDTH,
-    HEIGHT,
     col_threshold,
     move_without_render,
     t,

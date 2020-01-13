@@ -1,18 +1,18 @@
 import numpy as np
 
-NUM_OF_BODIES = 100
+NUM_OF_BODIES = 1000
 WIDTH = 800
 HEIGHT = 800
 
-MIN_SIZE = 5
-MAX_SIZE = 6
+MIN_SIZE = 1
+MAX_SIZE = 3
 
-
-m0mass = 5
+# mass of first body
+m0mass = 2
 
 n_bodies = NUM_OF_BODIES
 # Velocity
-V = np.random.uniform(low=-1, high=1, size=(n_bodies, 2))
+V = np.random.uniform(low=-10, high=10, size=(n_bodies, 2))
 # V = np.zeros(shape=(n_bodies, 2))
 V[0] = 0, 0
 
@@ -29,5 +29,6 @@ M[0] = m0mass
 # Color
 COLOR = np.full([n_bodies, 3], 255)
 
+# LOCK is always center
 DO_LOCK = False
 LOCK = 0
