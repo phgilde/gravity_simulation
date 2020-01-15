@@ -50,7 +50,7 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
-    @numba.jit
+    # @numba.jit
     def a(x):
         x_j = x.reshape(-1, 1, 2)
         x_i = x.reshape(1, -1, 2)
