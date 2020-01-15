@@ -22,8 +22,8 @@ pygame.init()
 if len(sys.argv) > 1:
     path = sys.argv[1]
 else:
-    path = input()
-time.sleep(2)
+    path = input("Path: ")
+# time.sleep(2)
 
 pause = False
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -33,6 +33,9 @@ screen.fill(BLACK)
 np.set_printoptions(suppress=True)
 clock = pygame.time.Clock()
 
+for i in range(0*60):
+    clock.tick(60)
+    pygame.display.update()
 
 def load(ix):
     conn = sqlite3.connect(path)
@@ -65,7 +68,6 @@ q1 = enthread(load, (ix,))
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            conn.close()
             sys.exit()
 
     surface.fill((0, 0, 0, bg_alpha))
@@ -96,7 +98,7 @@ while True:
         if m[j] > 0 and x[j][0] > 0 and x[j][1] > 0:
             out += str(x[j])
             r = int((m[j] ** (1 / 3)) * density)
-            pygame.draw.rect(surface, (255, 255, 255), pygame.Rect(px - r / 2, py - r / 2, r, r))
+            pygame.draw.circle(surface, (255, 255, 255), (px, py), int(r/2))
             pygame.draw.line(surface, (255, 255, 255), (px, py), (px_p, py_p), r)
     # print(out)
     # print(i)
