@@ -17,7 +17,7 @@ import cProfile
 
 import pstats
 
-from environment import V, X, M, COLOR, DO_LOCK, LOCK
+from environment import V, X, M, COLOR, DO_LOCK, LOCK, WIDTH, HEIGHT
 from datetime import datetime, timedelta
 
 import json
@@ -186,4 +186,3 @@ cProfile.run("main()", "restats")
 
 p = pstats.Stats("restats")
 p.strip_dirs().sort_stats("time").print_stats(10)
-
