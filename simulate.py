@@ -12,6 +12,7 @@ from cnf import (
     path,
     log_path,
     do_log,
+    theta,
 )
 import cProfile
 
@@ -23,6 +24,7 @@ from datetime import datetime, timedelta
 import json
 import sqlite3
 import numba
+import sys
 
 
 def main():
@@ -50,18 +52,66 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
-    @numba.njit
-    def a(x, m, n_bodies):
-        x_j = x.reshape(-1, 1, 2)
-        x_i = x.reshape(1, -1, 2)
-        d = x_j - x_i
+    sys.setrecursionlimit(1500)
 
-        a_ = (m.reshape(-1, 1, 1) * (d)) / (np.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3).reshape(
-            n_bodies, n_bodies, 1
-        )
-        for i in range(0, a_.shape[0]):
-            a_[i, i] = 0
-        return np.sum(a_, axis=0)
+    def quadtree(m, x):
+        if m.shape[0] == 1:
+            return {"center": x[0], "mass": m[0], "width": 0}
+        if m.shape[0] == 0:
+            return {"mass": 0, "width": 0}
+        min_x = np.min(x[:, 0])
+        min_y = np.min(x[:, 1])
+        max_x = np.max(x[:, 0])
+        max_y = np.max(x[:, 1])
+        # print(min_x, max_x)
+        div_x = (min_x + max_x) / 2
+        div_y = (min_y + max_y) / 2
+
+        quadrant1_bool = (x[:, 0] < div_x) & (x[:, 1] < div_y)
+        quadrant2_bool = (x[:, 0] >= div_x) & (x[:, 1] < div_y)
+        quadrant3_bool = (x[:, 0] < div_x) & (x[:, 1] >= div_y)
+        quadrant4_bool = (x[:, 0] >= div_x) & (x[:, 1] >= div_y)
+
+        quadrant1 = quadtree(m[quadrant1_bool], x[quadrant1_bool])
+        quadrant2 = quadtree(m[quadrant2_bool], x[quadrant2_bool])
+        quadrant3 = quadtree(m[quadrant3_bool], x[quadrant3_bool])
+        quadrant4 = quadtree(m[quadrant4_bool], x[quadrant4_bool])
+
+        return {
+            "center": np.average(x, axis=0),
+            "mass": np.sum(m),
+            "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
+            "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
+        }
+
+    def a(x, m, n_bodies, theta):
+        a_ = []
+        for i in range(len(m)):
+            x_cur, m_cur = x[np.arange(len(m)) != i], m[np.arange(len(m)) != i]
+            to_check = [quadtree(m_cur, x_cur)]
+            x_cur, m_cur = [], []
+            while len(to_check):
+                curr_quad = to_check.pop()
+                if curr_quad["mass"] == 0:
+                    continue
+                if curr_quad["width"] == 0:
+                    x_cur.append(curr_quad["center"])
+                    m_cur.append(curr_quad["mass"])
+                    continue
+                if curr_quad["width"] / (x[i, 0] - curr_quad["center"][0]) > theta:
+                    x_cur.append(curr_quad["center"])
+                    m_cur.append(curr_quad["mass"])
+                to_check += curr_quad["sub"]
+            m_cur = np.array(m_cur)
+            x_cur = np.array(x_cur)
+            a_.append(
+                np.sum(
+                    ((m[i] * m_cur).reshape((-1, 1)) * (x[i] - x_cur))
+                    / (((x[i, 0] - x_cur[:, 0]) ** 2 + (x[i, 1] - x_cur[:, 1]) ** 2) ** 3).reshape(-1, 1),
+                    axis=0,
+                )
+            )
+        return np.array(a_)
 
     # When two objects collide, their force and weight adds up
     def collision(m, p, v, n, lock):
@@ -100,16 +150,16 @@ def main():
 
     def sim_runge_kutter(m, x, v, step, n_bodies):
         k0 = step * v
-        l0 = step * a(x, m, n_bodies)
+        l0 = step * a(x, m, n_bodies, theta)
 
         k1 = step * (v + l0 * 0.5)
-        l1 = step * a(x + k0 * 0.5, m, n_bodies)
+        l1 = step * a(x + k0 * 0.5, m, n_bodies, theta)
 
         k2 = step * (v + l1 * 0.5)
-        l2 = step * a(x + l1 * 0.5, m, n_bodies)
+        l2 = step * a(x + l1 * 0.5, m, n_bodies, theta)
 
         k3 = step * (v + l2)
-        l3 = step * a(x + k2, m, n_bodies)
+        l3 = step * a(x + k2, m, n_bodies, theta)
         x = x + (1 / 6) * (k0 + 2 * k1 + 2 * k2 + k3)
 
         v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
