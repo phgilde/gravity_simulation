@@ -50,8 +50,8 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
-    # @numba.jit
-    def a(x):
+    @numba.njit
+    def a(x, m, n_bodies):
         x_j = x.reshape(-1, 1, 2)
         x_i = x.reshape(1, -1, 2)
         d = x_j - x_i
@@ -98,18 +98,18 @@ def main():
 
         return m, p, v, lock
 
-    def sim_runge_kutter(m, x, v, step):
+    def sim_runge_kutter(m, x, v, step, n_bodies):
         k0 = step * v
-        l0 = step * a(x)
+        l0 = step * a(x, m, n_bodies)
 
         k1 = step * (v + l0 * 0.5)
-        l1 = step * a(x + k0 * 0.5)
+        l1 = step * a(x + k0 * 0.5, m, n_bodies)
 
         k2 = step * (v + l1 * 0.5)
-        l2 = step * a(x + l1 * 0.5)
+        l2 = step * a(x + l1 * 0.5, m, n_bodies)
 
         k3 = step * (v + l2)
-        l3 = step * a(x + k2)
+        l3 = step * a(x + k2, m, n_bodies)
         x = x + (1 / 6) * (k0 + 2 * k1 + 2 * k2 + k3)
 
         v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
@@ -139,7 +139,7 @@ def main():
 
             x_pre = cp(x)
             # simulate
-            x, v = sim_runge_kutter(m, x, v, t)
+            x, v = sim_runge_kutter(m, x, v, t, n_bodies)
             v = v * drag_coeff
 
             # change position of objects so locked object is always in the middle of the screen
