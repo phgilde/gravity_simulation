@@ -33,9 +33,10 @@ screen.fill(BLACK)
 np.set_printoptions(suppress=True)
 clock = pygame.time.Clock()
 
-for i in range(0*60):
+for i in range(0 * 60):
     clock.tick(60)
     pygame.display.update()
+
 
 def load(ix):
     conn = sqlite3.connect(path)
@@ -75,7 +76,7 @@ while True:
     if len(lst) == batch:
         lst += q1.get()
         ix += batch
-        print("{}        ".format(ix*move_without_render))
+        print("{}        ".format(ix * move_without_render))
         q1 = enthread(load, (ix,))
     try:
         result = lst.pop(0)
@@ -98,10 +99,9 @@ while True:
         if m[j] > 0 and x[j][0] > 0 and x[j][1] > 0:
             out += str(x[j])
             r = int((m[j] ** (1 / 3)) * density)
-            pygame.draw.circle(surface, (255, 255, 255), (px, py), int(r/2))
+            pygame.draw.circle(surface, (255, 255, 255), (px, py), int(r / 2))
             pygame.draw.line(surface, (255, 255, 255), (px, py), (px_p, py_p), r)
     # print(out)
     # print(i)
     screen.blit(surface, (0, 0))
     pygame.display.flip()
-    
