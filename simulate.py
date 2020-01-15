@@ -11,7 +11,7 @@ from cnf import (
     save_steps,
     path,
     log_path,
-    do_log
+    do_log,
 )
 import cProfile
 
@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 
 import json
 import sqlite3
+import numba
 
 
 def main():
@@ -49,6 +50,7 @@ def main():
     color = np.copy(COLOR)
     cp = np.copy
 
+    @numba.jit
     def a(x):
         x_j = x.reshape(-1, 1, 2)
         x_i = x.reshape(1, -1, 2)
@@ -57,8 +59,8 @@ def main():
         a_ = (m.reshape(-1, 1, 1) * (d)) / (np.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3).reshape(
             n_bodies, n_bodies, 1
         )
-        r = np.arange(a_.shape[0])
-        a_[r, r] = 0, 0
+        for i in range(0, a_.shape[0]):
+            a_[i, i] = 0
         return np.sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
@@ -164,11 +166,7 @@ def main():
             )
             if do_log:
                 with open(log_path.format(now), "a") as f:
-                    f.write(
-                        "{},{},{},{}\n".format(
-                            steps, time.time() - last, time.time(), n_bodies
-                        )
-                    )
+                    f.write("{},{},{},{}\n".format(steps, time.time() - last, time.time(), n_bodies))
             last = time.time()
             steps += 1
             if steps % save_steps == 0:
