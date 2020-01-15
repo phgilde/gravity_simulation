@@ -64,12 +64,15 @@ def main():
         return np.sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
-    def collision(m, p, v, n, lock):
-        for i in range(n):
+    @numba.njit
+    def collision(m, p, v, n, lock, col_threshold):
+        for i in numba.prange(n):
             if m[i] > 0:
                 diff = p - p[i]
                 r = m[i] ** (1 / 3)
-                distance = np.linalg.norm(diff, axis=1)
+                distance = np.arange(diff.shape[0])
+                for j in numba.prange(diff.shape[0]):
+                    distance[j] = (diff[j, 0] ** 2 + diff[j, 1] ** 2) ** .5
                 collisions = (distance < (r * col_threshold)) & (m > 0)
                 collisions[i] = False
                 m_col = m[collisions]
@@ -93,8 +96,8 @@ def main():
 
                 p[i] /= m[i]
 
-                if lock in collisions:
-                    lock = i
+                # if lock in collisions:
+                #     lock = i
 
         return m, p, v, lock
 
@@ -133,7 +136,7 @@ def main():
         while (steps < max_steps) and (n_bodies >= min_bodies):
 
             # collide objects
-            m, x, v, _ = collision(m, x, v, n_bodies, lock)
+            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold)
             # remove mass=0 objects
             m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
