@@ -25,6 +25,7 @@ import json
 import sqlite3
 import numba
 import sys
+from functools import lru_cache
 
 
 def main():
@@ -54,6 +55,7 @@ def main():
 
     sys.setrecursionlimit(1500)
 
+    # @lru_cache(maxsize=256)
     def quadtree(m, x):
         if m.shape[0] == 1:
             return {"center": x[0], "mass": m[0], "width": 0}
@@ -78,7 +80,7 @@ def main():
         quadrant4 = quadtree(m[quadrant4_bool], x[quadrant4_bool])
 
         return {
-            "center": np.average(x, axis=0),
+            "center": np.average(x * m.reshape((-1, 1)), axis=0) / np.sum(m),
             "mass": np.sum(m),
             "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
             "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
@@ -86,31 +88,33 @@ def main():
 
     def a(x, m, n_bodies, theta):
         a_ = []
+        tree = quadtree(m, x)
         for i in range(len(m)):
-            x_cur, m_cur = x[np.arange(len(m)) != i], m[np.arange(len(m)) != i]
-            to_check = [quadtree(m_cur, x_cur)]
+            to_check = [tree]
             x_cur, m_cur = [], []
             while len(to_check):
                 curr_quad = to_check.pop()
                 if curr_quad["mass"] == 0:
                     continue
                 if curr_quad["width"] == 0:
+                    if (curr_quad["center"] != x[i]).any():
+                        x_cur.append(curr_quad["center"])
+                        m_cur.append(curr_quad["mass"])
+                    continue
+                if curr_quad["width"] / (x[i, 0] - curr_quad["center"][0]) < theta:
                     x_cur.append(curr_quad["center"])
                     m_cur.append(curr_quad["mass"])
                     continue
-                if curr_quad["width"] / (x[i, 0] - curr_quad["center"][0]) > theta:
-                    x_cur.append(curr_quad["center"])
-                    m_cur.append(curr_quad["mass"])
                 to_check += curr_quad["sub"]
+
             m_cur = np.array(m_cur)
             x_cur = np.array(x_cur)
-            a_.append(
-                np.sum(
-                    ((m[i] * m_cur).reshape((-1, 1)) * (x[i] - x_cur))
-                    / (((x[i, 0] - x_cur[:, 0]) ** 2 + (x[i, 1] - x_cur[:, 1]) ** 2) ** 3).reshape(-1, 1),
-                    axis=0,
-                )
-            )
+            diff = x_cur - x[i]
+
+            force = (m_cur * m[i]) / np.sqrt(diff[:, 0] ** 2 + diff[:, 1] ** 2) ** 2
+            direction = diff / np.sqrt(diff[:, 0] ** 2 + diff[:, 1] ** 2).reshape(-1, 1)
+            a_.append(np.sum(force.reshape(-1, 1) * direction, axis=0))
+
         return np.array(a_)
 
     # When two objects collide, their force and weight adds up
