@@ -80,7 +80,7 @@ def main():
         quadrant4 = quadtree(m[quadrant4_bool], x[quadrant4_bool])
 
         return {
-            "center": np.average((x * m.reshape(-1, 1)) / np.average(m), axis=0),
+            "center": np.average((x * m.reshape(-1, 1)), axis=0) / np.average(m),
             "mass": np.sum(m),
             "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
             "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
