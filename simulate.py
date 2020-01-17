@@ -80,7 +80,7 @@ def main():
         quadrant4 = quadtree(m[quadrant4_bool], x[quadrant4_bool])
 
         return {
-            "center": np.average(x * m.reshape((-1, 1)), axis=0) / np.sum(m),
+            "center": np.average((x * m.reshape(-1, 1)) / np.average(m), axis=0),
             "mass": np.sum(m),
             "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
             "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
@@ -106,9 +106,10 @@ def main():
                     m_cur.append(curr_quad["mass"])
                     continue
                 to_check += curr_quad["sub"]
-
             m_cur = np.array(m_cur)
             x_cur = np.array(x_cur)
+            # m_cur = m[np.arange(len(m))!=i]
+            # x_cur = x[np.arange(len(m))!=i]
 
             a_.append(
                 np.sum(
