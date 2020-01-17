@@ -12,6 +12,7 @@ from cnf import (
     path,
     log_path,
     do_log,
+    density,
 )
 import cProfile
 
@@ -65,11 +66,11 @@ def main():
 
     # When two objects collide, their force and weight adds up
     @numba.njit
-    def collision(m, p, v, n, lock, col_threshold):
+    def collision(m, p, v, n, lock, col_threshold, density):
         for i in numba.prange(n):
             if m[i] > 0:
                 diff = p - p[i]
-                r = m[i] ** (1 / 3)
+                r = m[i] ** (1 / 3) * density
                 distance = np.arange(diff.shape[0])
                 for j in numba.prange(diff.shape[0]):
                     distance[j] = (diff[j, 0] ** 2 + diff[j, 1] ** 2) ** .5
@@ -136,7 +137,7 @@ def main():
         while (steps < max_steps) and (n_bodies >= min_bodies):
 
             # collide objects
-            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold)
+            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold, density)
             # remove mass=0 objects
             m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
