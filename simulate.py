@@ -109,11 +109,14 @@ def main():
 
             m_cur = np.array(m_cur)
             x_cur = np.array(x_cur)
-            diff = x_cur - x[i]
 
-            force = (m_cur * m[i]) / np.sqrt(diff[:, 0] ** 2 + diff[:, 1] ** 2) ** 2
-            direction = diff / np.sqrt(diff[:, 0] ** 2 + diff[:, 1] ** 2).reshape(-1, 1)
-            a_.append(np.sum(force.reshape(-1, 1) * direction, axis=0))
+            a_.append(
+                np.sum(
+                    (m_cur.reshape(-1, 1) * (x_cur - x[i]))
+                    / np.sqrt((x_cur[:, 0] - x[i, 0]) ** 2 + (x_cur[:, 1] - x[i, 1]) ** 2).reshape(-1, 1) ** 3,
+                    axis=0,
+                )
+            )
 
         return np.array(a_)
 
