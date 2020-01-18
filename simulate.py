@@ -13,7 +13,7 @@ from cnf import (
     log_path,
     do_log,
     theta,
-    use_barnes_hut
+    use_barnes_hut,
     density,
 )
 import cProfile
