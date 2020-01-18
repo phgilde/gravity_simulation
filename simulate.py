@@ -13,6 +13,7 @@ from cnf import (
     log_path,
     do_log,
     theta,
+    use_barnes_hut
 )
 import cProfile
 
@@ -25,7 +26,6 @@ import json
 import sqlite3
 import numba
 import sys
-from functools import lru_cache
 
 
 def main():
@@ -85,53 +85,69 @@ def main():
             "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
             "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
         }
-
-    def a(x, m, n_bodies, theta):
-        a_ = []
-        tree = quadtree(m, x)
-        for i in range(len(m)):
-            to_check = [tree]
-            x_cur, m_cur = [], []
-            while len(to_check):
-                curr_quad = to_check.pop()
-                if curr_quad["mass"] == 0:
-                    continue
-                if curr_quad["width"] == 0:
-                    if (curr_quad["center"] != x[i]).any():
+    if use_barnes_hut:
+        def a(x, m, n_bodies, theta):
+            a_ = []
+            tree = quadtree(m, x)
+            for i in range(len(m)):
+                to_check = [tree]
+                x_cur, m_cur = [], []
+                while len(to_check):
+                    curr_quad = to_check.pop()
+                    if curr_quad["mass"] == 0:
+                        continue
+                    if curr_quad["width"] == 0:
+                        if (curr_quad["center"] != x[i]).any():
+                            x_cur.append(curr_quad["center"])
+                            m_cur.append(curr_quad["mass"])
+                        continue
+                    if (
+                        curr_quad["width"]
+                        / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0])**2)
+                        < theta
+                    ):
                         x_cur.append(curr_quad["center"])
                         m_cur.append(curr_quad["mass"])
-                    continue
-                if (
-                    curr_quad["width"]
-                    / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0])**2)
-                    < theta
-                ):
-                    x_cur.append(curr_quad["center"])
-                    m_cur.append(curr_quad["mass"])
-                    continue
-                to_check += curr_quad["sub"]
-            m_cur = np.array(m_cur)
-            x_cur = np.array(x_cur)
-            # m_cur = m[np.arange(len(m)) != i]
-            # x_cur = x[np.arange(len(m)) != i]
+                        continue
+                    to_check += curr_quad["sub"]
+                m_cur = np.array(m_cur)
+                x_cur = np.array(x_cur)
+                # m_cur = m[np.arange(len(m)) != i]
+                # x_cur = x[np.arange(len(m)) != i]
 
-            a_.append(
-                np.sum(
-                    (m_cur.reshape(-1, 1) * (x_cur - x[i]))
-                    / np.sqrt((x_cur[:, 0] - x[i, 0]) ** 2 + (x_cur[:, 1] - x[i, 1]) ** 2).reshape(-1, 1) ** 3,
-                    axis=0,
+                a_.append(
+                    np.sum(
+                        (m_cur.reshape(-1, 1) * (x_cur - x[i]))
+                        / np.sqrt((x_cur[:, 0] - x[i, 0]) ** 2 + (x_cur[:, 1] - x[i, 1]) ** 2).reshape(-1, 1) ** 3,
+                        axis=0,
+                    )
                 )
-            )
 
-        return np.array(a_)
+            return np.array(a_)
+    else:
+        @numba.njit
+        def a(x, m, n_bodies):
+            x_j = x.reshape(-1, 1, 2)
+            x_i = x.reshape(1, -1, 2)
+            d = x_j - x_i
+
+            a_ = (m.reshape(-1, 1, 1) * (d)) / (np.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3).reshape(
+                n_bodies, n_bodies, 1
+            )
+            for i in range(0, a_.shape[0]):
+                a_[i, i] = 0
+            return np.sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
-    def collision(m, p, v, n, lock):
-        for i in range(n):
+    @numba.njit
+    def collision(m, p, v, n, lock, col_threshold, density):
+        for i in numba.prange(n):
             if m[i] > 0:
                 diff = p - p[i]
-                r = m[i] ** (1 / 3)
-                distance = np.linalg.norm(diff, axis=1)
+                r = m[i] ** (1 / 3) * density
+                distance = np.arange(diff.shape[0])
+                for j in numba.prange(diff.shape[0]):
+                    distance[j] = (diff[j, 0] ** 2 + diff[j, 1] ** 2) ** .5
                 collisions = (distance < (r * col_threshold)) & (m > 0)
                 collisions[i] = False
                 m_col = m[collisions]
@@ -155,11 +171,10 @@ def main():
 
                 p[i] /= m[i]
 
-                if lock in collisions:
-                    lock = i
+                # if lock in collisions:
+                #     lock = i
 
         return m, p, v, lock
-
     def sim_runge_kutter(m, x, v, step, n_bodies):
         k0 = step * v
         l0 = step * a(x, m, n_bodies, theta)
