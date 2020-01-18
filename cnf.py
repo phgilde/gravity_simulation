@@ -27,3 +27,6 @@ min_bodies = 2
 path = "D:/simulations/{}.db"
 log_path = "logs/{}.csv"
 do_log = False
+
+use_barnes_hut = False
+theta = 0.5
