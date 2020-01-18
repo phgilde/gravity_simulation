@@ -14,6 +14,7 @@ from cnf import (
     do_log,
     theta,
     use_barnes_hut
+    density,
 )
 import cProfile
 
@@ -210,7 +211,7 @@ def main():
         while (steps < max_steps) and (n_bodies >= min_bodies):
 
             # collide objects
-            m, x, v, _ = collision(m, x, v, n_bodies, lock)
+            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold, density)
             # remove mass=0 objects
             m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
