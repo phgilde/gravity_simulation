@@ -28,4 +28,5 @@ path = "D:/simulations/{}.db"
 log_path = "logs/{}.csv"
 do_log = False
 
-theta = 0.1
+use_barnes_hut = False
+theta = 0.5
