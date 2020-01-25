@@ -98,7 +98,7 @@ while True:
 
         if m[j] > 0 and x[j][0] > 0 and x[j][1] > 0:
             out += str(x[j])
-            r = int((m[j] ** (1 / 3)) * density)
+            r = int(((3 * m[j] * density) / (4 * np.pi)) ** (1 / 3))
             pygame.draw.circle(surface, (255, 255, 255), (px, py), int(r / 2))
             pygame.draw.line(surface, (255, 255, 255), (px, py), (px_p, py_p), r)
     # print(out)
