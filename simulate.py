@@ -86,8 +86,10 @@ def main():
             "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
             "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
         }
+
     if use_barnes_hut:
-        def a(x, m, n_bodies, theta):
+
+        def a(x, m, n_bodies, theta=theta):
             a_ = []
             tree = quadtree(m, x)
             for i in range(len(m)):
@@ -104,7 +106,7 @@ def main():
                         continue
                     if (
                         curr_quad["width"]
-                        / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0])**2)
+                        / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0]) ** 2)
                         < theta
                     ):
                         x_cur.append(curr_quad["center"])
@@ -125,7 +127,9 @@ def main():
                 )
 
             return np.array(a_)
+
     else:
+
         @numba.njit
         def a(x, m, n_bodies):
             x_j = x.reshape(-1, 1, 2)
@@ -145,10 +149,10 @@ def main():
         for i in numba.prange(n):
             if m[i] > 0:
                 diff = p - p[i]
-                r = m[i] ** (1 / 3) * density
+                r = ((3 * m[i] * density) / (4 * np.pi)) ** (1 / 3)
                 distance = np.arange(diff.shape[0])
                 for j in numba.prange(diff.shape[0]):
-                    distance[j] = (diff[j, 0] ** 2 + diff[j, 1] ** 2) ** .5
+                    distance[j] = (diff[j, 0] ** 2 + diff[j, 1] ** 2) ** 0.5
                 collisions = (distance < (r * col_threshold)) & (m > 0)
                 collisions[i] = False
                 m_col = m[collisions]
@@ -176,18 +180,19 @@ def main():
                 #     lock = i
 
         return m, p, v, lock
+
     def sim_runge_kutter(m, x, v, step, n_bodies):
         k0 = step * v
-        l0 = step * a(x, m, n_bodies, theta)
+        l0 = step * a(x, m, n_bodies)
 
         k1 = step * (v + l0 * 0.5)
-        l1 = step * a(x + k0 * 0.5, m, n_bodies, theta)
+        l1 = step * a(x + k0 * 0.5, m, n_bodies)
 
         k2 = step * (v + l1 * 0.5)
-        l2 = step * a(x + l1 * 0.5, m, n_bodies, theta)
+        l2 = step * a(x + l1 * 0.5, m, n_bodies)
 
         k3 = step * (v + l2)
-        l3 = step * a(x + k2, m, n_bodies, theta)
+        l3 = step * a(x + k2, m, n_bodies)
         x = x + (1 / 6) * (k0 + 2 * k1 + 2 * k2 + k3)
 
         v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
