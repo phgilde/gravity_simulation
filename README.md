@@ -11,3 +11,6 @@ To create an own simulation environment, change `environment.py` to what you wan
 
 `cnf.py`has all the settings for simulating the environment.
 `cnfrender.py` stores the settings for rendering a simulation.
+
+## Simulation Algorithm
+There are 2 algorithms implemented for the simulation at the moment, the standard bruteforce algorithm and the barnes-hut-algorithm. The bruteforce algorithm is faster in most cases, to use it set `use_barnes_hut` in `cnf.py` to False. To use the barnes-hut algorithm, set it to true.
