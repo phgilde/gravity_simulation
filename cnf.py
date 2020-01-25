@@ -28,5 +28,7 @@ path = "D:/simulations/{}.db"
 log_path = "logs/{}.csv"
 do_log = False
 
+# Simulation algorithm, when True the simulation runs slower most of the time
 use_barnes_hut = False
+# Precision Threshold for barnes_hut algorithm
 theta = 0.5
