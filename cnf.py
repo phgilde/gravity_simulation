@@ -1,9 +1,9 @@
 
 # precision of the simulation, lower = higher precision
-t = 0.001
+t = 0.1
 
 # simulation save rate
-move_without_render = 8
+move_without_render = 4
 
 # multiply particle radius by this, collide when close enough
 col_threshold = 1.2

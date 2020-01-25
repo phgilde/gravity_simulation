@@ -1,12 +1,12 @@
 # screen shape
-WIDTH = 800
-HEIGHT = 800
+WIDTH = 900
+HEIGHT = 900
 
 # render every nth frame
-move_without_render = 10
+move_without_render = 1
 
 # particle tail
-bg_alpha = 1
+bg_alpha = 100
 
 # max framerate
 framerate = 60
