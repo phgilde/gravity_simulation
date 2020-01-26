@@ -91,19 +91,24 @@ def main():
 
         def a(x, m, n_bodies, theta=theta):
             a_ = []
+            # generate quadtree
             tree = quadtree(m, x)
             for i in range(len(m)):
                 to_check = [tree]
                 x_cur, m_cur = [], []
                 while len(to_check):
                     curr_quad = to_check.pop()
+                    # empty external quadrant
                     if curr_quad["mass"] == 0:
                         continue
+                    # not empty external quadrant
                     if curr_quad["width"] == 0:
+                        # external quadrant is not current particle
                         if (curr_quad["center"] != x[i]).any():
                             x_cur.append(curr_quad["center"])
                             m_cur.append(curr_quad["mass"])
                         continue
+                    # width/distance from center of gravity < theta
                     if (
                         curr_quad["width"]
                         / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0]) ** 2)
@@ -112,12 +117,12 @@ def main():
                         x_cur.append(curr_quad["center"])
                         m_cur.append(curr_quad["mass"])
                         continue
+                    # open quadrant
                     to_check += curr_quad["sub"]
                 m_cur = np.array(m_cur)
                 x_cur = np.array(x_cur)
-                # m_cur = m[np.arange(len(m)) != i]
-                # x_cur = x[np.arange(len(m)) != i]
-
+                
+                # calculate gravitational forces and add them to the corresponding array
                 a_.append(
                     np.sum(
                         (m_cur.reshape(-1, 1) * (x_cur - x[i]))
