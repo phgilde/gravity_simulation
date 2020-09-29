@@ -6,3 +6,4 @@ __pycache__
 workspace.code-workspace
 simulations
 logs
+venv/
