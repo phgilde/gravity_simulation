@@ -3,7 +3,7 @@ WIDTH = 900
 HEIGHT = 900
 
 # render every nth frame
-move_without_render = 1
+move_without_render = 10
 
 # particle tail
 bg_alpha = 100

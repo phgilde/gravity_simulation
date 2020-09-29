@@ -1,3 +1,4 @@
 numpy
 pygame
 tensorflow-directml
+numba

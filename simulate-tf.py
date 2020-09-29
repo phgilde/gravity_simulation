@@ -26,7 +26,6 @@ from datetime import datetime, timedelta
 
 import json
 import sqlite3
-import numba
 import sys
 
 tf.compat.v1.enable_eager_execution()
@@ -34,7 +33,7 @@ tf.compat.v1.enable_eager_execution()
 
 def main():
     now = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
-
+    print(path.format(now))
     # create database
     conn = sqlite3.connect(path.format(now))
     cur = conn.cursor()
@@ -49,7 +48,6 @@ def main():
 
     # Position
     x = tf.convert_to_tensor(X, dtype=tf.float32)
-
     # Mass
     m = tf.convert_to_tensor(M, dtype=tf.float32)
 
@@ -62,16 +60,20 @@ def main():
     sys.setrecursionlimit(1500)
 
     def a(x, m, n_bodies):
-        distance = tf.transpose(x) - x
+        x = tf.reshape(x, shape=(n_bodies, 1, 2))
+        distance = tf.transpose(x, perm=(1, 0, 2)) - x
         l2distance = tf.norm(distance, ord=2, axis=2)
 
-        g = tf.transpose(m) / (l2distance ** 2)
-        k = tf.transpose(m) / (((l2distance / (r + tf.transpose(r))) ** 3) * l2distance ** 2)
-        a = tf.reduce_sum((g - k) * (distance / l2distance), axis=1)
+        g = tf.math.divide_no_nan(tf.transpose(m), (l2distance ** 2))
+        a = tf.reduce_sum(
+            tf.reshape(g, shape=(n_bodies, n_bodies, 1))
+            * (tf.math.divide_no_nan(distance, tf.reshape(l2distance, shape=(n_bodies, n_bodies, 1)))),
+            axis=1,
+        )
 
         return a
 
-    def sim_runge_kutter(m, x, v, step, n_bodies):
+    def sim_runge_kutta(m, x, v, step, n_bodies):
         k0 = step * v
         l0 = step * a(x, m, n_bodies)
 
@@ -91,15 +93,34 @@ def main():
 
     np.set_printoptions(suppress=True)
 
+    def collision(m, x, v, n, lock, col_threshold, density):
+        x = tf.reshape(x, shape=(n_bodies, 1, 2))
+        distance = tf.transpose(x, perm=(1, 0, 2)) - x
+        l2distance = tf.norm(distance, ord=2, axis=2)
+
+        
+
+    def kill_empty(m, x, v, n):
+        empty = m == 0
+        m = m[~empty]
+        x = x[~empty]
+        v = v[~empty]
+        n = np.sum(~empty)
+        return m, x, v, n
+
     start = time.time()
     last = start
     steps = 0
     try:
         while (steps < max_steps) and (n_bodies >= min_bodies):
+            # collide objects
+            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold, density)
+            # remove mass=0 objects
+            m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
             x_pre = cp(x)
             # simulate
-            x, v = sim_runge_kutter(m, x, v, t, n_bodies)
+            x, v = sim_runge_kutta(m, x, v, t, n_bodies)
             v = v * drag_coeff
 
             # change position of objects so locked object is always in the middle of the screen
@@ -111,9 +132,9 @@ def main():
                     "INSERT INTO sim VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         steps,
-                        json.dumps(x.astype(int).tolist()),
-                        json.dumps(v.astype(int).tolist()),
-                        json.dumps(m.astype(int).tolist()),
+                        json.dumps(x.numpy().astype(int).tolist()),
+                        json.dumps(v.numpy().astype(int).tolist()),
+                        json.dumps(m.numpy().astype(int).tolist()),
                         json.dumps(color.astype(int).tolist()),
                         json.dumps(x_pre.astype(int).tolist()),
                     ),
