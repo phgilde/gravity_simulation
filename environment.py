@@ -25,6 +25,8 @@ X[2] = WIDTH / 2, HEIGHT / 3
 # Mass
 M = np.random.randint(MIN_SIZE, MAX_SIZE, size=n_bodies)
 M[0] = m0mass
+# Radius
+R = int(((3 * M) / (4 * np.pi)) ** (1 / 3))
 
 # Color
 COLOR = np.full([n_bodies, 3], 255)
