@@ -136,8 +136,6 @@ def main():
     else:
 
         def a(x, m, n_bodies):
-            x = tf.convert_to_tensor(x, dtype=tf.float32)
-            m = tf.convert_to_tensor(m, dtype=tf.float32)
             x_j = tf.reshape(x, (-1, 1, 2))
             x_i = tf.reshape(x, (1, -1, 2))
             d = x_j - x_i
@@ -145,7 +143,7 @@ def main():
             a_ = tf.math.divide_no_nan((tf.reshape(m, (-1, 1, 1)) * (d)), tf.reshape(
                 tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3, (n_bodies, n_bodies, 1)
             ))
-            return tf.reduce_sum(a_, axis=0).numpy()
+            return tf.reduce_sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
     @numba.njit
@@ -186,6 +184,10 @@ def main():
         return m, p, v, lock
 
     def sim_runge_kutter(m, x, v, step, n_bodies):
+        x = tf.convert_to_tensor(x, dtype=tf.float32)
+        m = tf.convert_to_tensor(m, dtype=tf.float32)
+        v = tf.convert_to_tensor(v, dtype=tf.float32)
+
         k0 = step * v
         l0 = step * a(x, m, n_bodies)
 
@@ -201,7 +203,7 @@ def main():
 
         v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
 
-        return x, v
+        return x.numpy(), v.numpy()
 
     def kill_empty(m, x, v, n):
         empty = m == 0
