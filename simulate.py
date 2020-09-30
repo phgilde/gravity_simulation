@@ -17,7 +17,7 @@ from cnf import (
     density,
 )
 import cProfile
-
+import tensorflow as tf
 import pstats
 
 from environment import V, X, M, COLOR, DO_LOCK, LOCK, WIDTH, HEIGHT
@@ -55,7 +55,7 @@ def main():
     cp = np.copy
 
     sys.setrecursionlimit(1500)
-
+    tf.compat.v1.enable_eager_execution()
     # @lru_cache(maxsize=256)
     def quadtree(m, x):
         if m.shape[0] == 1:
@@ -121,7 +121,7 @@ def main():
                     to_check += curr_quad["sub"]
                 m_cur = np.array(m_cur)
                 x_cur = np.array(x_cur)
-                
+
                 # calculate gravitational forces and add them to the corresponding array
                 a_.append(
                     np.sum(
@@ -135,18 +135,17 @@ def main():
 
     else:
 
-        @numba.njit
         def a(x, m, n_bodies):
-            x_j = x.reshape(-1, 1, 2)
-            x_i = x.reshape(1, -1, 2)
+            x = tf.convert_to_tensor(x, dtype=tf.float32)
+            m = tf.convert_to_tensor(m, dtype=tf.float32)
+            x_j = tf.reshape(x, (-1, 1, 2))
+            x_i = tf.reshape(x, (1, -1, 2))
             d = x_j - x_i
 
-            a_ = (m.reshape(-1, 1, 1) * (d)) / (np.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3).reshape(
-                n_bodies, n_bodies, 1
-            )
-            for i in range(0, a_.shape[0]):
-                a_[i, i] = 0
-            return np.sum(a_, axis=0)
+            a_ = tf.math.divide_no_nan((tf.reshape(m, (-1, 1, 1)) * (d)), tf.reshape(
+                tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3, (n_bodies, n_bodies, 1)
+            ))
+            return tf.reduce_sum(a_, axis=0).numpy()
 
     # When two objects collide, their force and weight adds up
     @numba.njit
