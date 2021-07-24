@@ -35,7 +35,9 @@ def main():
     # create database
     conn = sqlite3.connect(path.format(now))
     cur = conn.cursor()
-    cur.execute("CREATE TABLE sim (ix INT PRIMARYKEY, x JSON, v JSON, m JSON, color JSON, x_pre JSON)")
+    cur.execute(
+        "CREATE TABLE sim (ix INT PRIMARYKEY, x JSON, v JSON, m JSON, color JSON, x_pre JSON)"
+    )
     conn.commit()
 
     lock = LOCK
@@ -111,7 +113,10 @@ def main():
                     # width/distance from center of gravity < theta
                     if (
                         curr_quad["width"]
-                        / np.sqrt((x[i, 0] - curr_quad["center"][0]) ** 2 + (x[i, 1] - curr_quad["center"][0]) ** 2)
+                        / np.sqrt(
+                            (x[i, 0] - curr_quad["center"][0]) ** 2
+                            + (x[i, 1] - curr_quad["center"][0]) ** 2
+                        )
                         < theta
                     ):
                         x_cur.append(curr_quad["center"])
@@ -126,7 +131,11 @@ def main():
                 a_.append(
                     np.sum(
                         (m_cur.reshape(-1, 1) * (x_cur - x[i]))
-                        / np.sqrt((x_cur[:, 0] - x[i, 0]) ** 2 + (x_cur[:, 1] - x[i, 1]) ** 2).reshape(-1, 1) ** 3,
+                        / np.sqrt(
+                            (x_cur[:, 0] - x[i, 0]) ** 2
+                            + (x_cur[:, 1] - x[i, 1]) ** 2
+                        ).reshape(-1, 1)
+                        ** 3,
                         axis=0,
                     )
                 )
@@ -140,9 +149,13 @@ def main():
             x_i = tf.reshape(x, (1, -1, 2))
             d = x_j - x_i
 
-            a_ = tf.math.divide_no_nan((tf.reshape(m, (-1, 1, 1)) * (d)), tf.reshape(
-                tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3, (n_bodies, n_bodies, 1)
-            ))
+            a_ = tf.math.divide_no_nan(
+                (tf.reshape(m, (-1, 1, 1)) * (d)),
+                tf.reshape(
+                    tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3,
+                    (n_bodies, n_bodies, 1),
+                ),
+            )
             return tf.reduce_sum(a_, axis=0)
 
     # When two objects collide, their force and weight adds up
@@ -222,7 +235,9 @@ def main():
         while (steps < max_steps) and (n_bodies >= min_bodies):
 
             # collide objects
-            m, x, v, _ = collision(m, x, v, n_bodies, lock, col_threshold, density)
+            m, x, v, _ = collision(
+                m, x, v, n_bodies, lock, col_threshold, density
+            )
             # remove mass=0 objects
             m, x, v, n_bodies = kill_empty(m, x, v, n_bodies)
 
@@ -249,13 +264,20 @@ def main():
                 )
             print(
                 "{:>10} {} {} {}           ".format(
-                    steps, timedelta(seconds=time.time() - last), timedelta(seconds=time.time() - start), n_bodies
+                    steps,
+                    timedelta(seconds=time.time() - last),
+                    timedelta(seconds=time.time() - start),
+                    n_bodies,
                 ),
                 end="\r",
             )
             if do_log:
                 with open(log_path.format(now), "a") as f:
-                    f.write("{},{},{},{}\n".format(steps, time.time() - last, time.time(), n_bodies))
+                    f.write(
+                        "{},{},{},{}\n".format(
+                            steps, time.time() - last, time.time(), n_bodies
+                        )
+                    )
             last = time.time()
             steps += 1
             if steps % save_steps == 0:
