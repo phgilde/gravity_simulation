@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 import json
 import sqlite3
-import numba
+import progressbar
 import sys
 
 
@@ -202,7 +202,7 @@ def main():
         m = tf.convert_to_tensor(m, dtype=tf.float32)
         v = tf.convert_to_tensor(v, dtype=tf.float32)
 
-        while (steps < max_steps) and (n_bodies >= min_bodies):    
+        for steps in progressbar.progressbar(range(max_steps)):
             x_pre = cp(x)
             # simulate
             x, v = sim_runge_kutter(m, x, v, t, n_bodies)
@@ -224,15 +224,7 @@ def main():
                         json.dumps(x_pre.astype(int).tolist()),
                     ),
                 )
-            print(
-                "{:>10} {} {} {}           ".format(
-                    steps,
-                    timedelta(seconds=time.time() - last),
-                    timedelta(seconds=time.time() - start),
-                    n_bodies,
-                ),
-                end="\r",
-            )
+            
             if do_log:
                 with open(log_path.format(now), "a") as f:
                     f.write(
