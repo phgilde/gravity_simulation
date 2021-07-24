@@ -58,113 +58,20 @@ def main():
 
     sys.setrecursionlimit(1500)
     tf.compat.v1.enable_eager_execution()
-    # @lru_cache(maxsize=256)
-    def quadtree(m, x):
-        if m.shape[0] == 1:
-            return {"center": x[0], "mass": m[0], "width": 0}
-        if m.shape[0] == 0:
-            return {"mass": 0, "width": 0}
-        min_x = np.min(x[:, 0])
-        min_y = np.min(x[:, 1])
-        max_x = np.max(x[:, 0])
-        max_y = np.max(x[:, 1])
-        # print(min_x, max_x)
-        div_x = (min_x + max_x) / 2
-        div_y = (min_y + max_y) / 2
 
-        quadrant1_bool = (x[:, 0] < div_x) & (x[:, 1] < div_y)
-        quadrant2_bool = (x[:, 0] >= div_x) & (x[:, 1] < div_y)
-        quadrant3_bool = (x[:, 0] < div_x) & (x[:, 1] >= div_y)
-        quadrant4_bool = (x[:, 0] >= div_x) & (x[:, 1] >= div_y)
+    def a(x, m, n_bodies):
+        x_j = tf.reshape(x, (-1, 1, 2))
+        x_i = tf.reshape(x, (1, -1, 2))
+        d = x_j - x_i
 
-        quadrant1 = quadtree(m[quadrant1_bool], x[quadrant1_bool])
-        quadrant2 = quadtree(m[quadrant2_bool], x[quadrant2_bool])
-        quadrant3 = quadtree(m[quadrant3_bool], x[quadrant3_bool])
-        quadrant4 = quadtree(m[quadrant4_bool], x[quadrant4_bool])
-
-        return {
-            "center": np.sum(x * m.reshape(-1, 1), axis=0) / np.sum(m),
-            "mass": np.sum(m),
-            "sub": [quadrant1, quadrant2, quadrant3, quadrant4],
-            "width": (((max_x - min_x) ** 2) + ((max_y - min_y) ** 2)) ** 0.5,
-        }
-
-    if use_barnes_hut:
-
-        def a(x, m, n_bodies, theta=theta):
-            a_ = []
-            # generate quadtree
-            tree = quadtree(m, x)
-            for i in range(len(m)):
-                to_check = [tree]
-                x_cur, m_cur = [], []
-                while len(to_check):
-                    curr_quad = to_check.pop()
-                    # empty external quadrant
-                    if curr_quad["mass"] == 0:
-                        continue
-                    # not empty external quadrant
-                    if curr_quad["width"] == 0:
-                        # external quadrant is not current particle
-                        if (curr_quad["center"] != x[i]).any():
-                            x_cur.append(curr_quad["center"])
-                            m_cur.append(curr_quad["mass"])
-                        continue
-                    # width/distance from center of gravity < theta
-                    if (
-                        curr_quad["width"]
-                        / np.sqrt(
-                            (x[i, 0] - curr_quad["center"][0]) ** 2
-                            + (x[i, 1] - curr_quad["center"][0]) ** 2
-                        )
-                        < theta
-                    ):
-                        x_cur.append(curr_quad["center"])
-                        m_cur.append(curr_quad["mass"])
-                        continue
-                    # open quadrant
-                    to_check += curr_quad["sub"]
-                m_cur = np.array(m_cur)
-                x_cur = np.array(x_cur)
-
-                # calculate gravitational forces and add them to the corresponding array
-                a_.append(
-                    np.sum(
-                        (m_cur.reshape(-1, 1) * (x_cur - x[i]))
-                        / np.sqrt(
-                            (x_cur[:, 0] - x[i, 0]) ** 2
-                            + (x_cur[:, 1] - x[i, 1]) ** 2
-                        ).reshape(-1, 1)
-                        ** 3,
-                        axis=0,
-                    )
-                )
-
-            return np.array(a_)
-
-    else:
-
-        def a(x, m, n_bodies):
-            x_j = tf.reshape(x, (-1, 1, 2))
-            x_i = tf.reshape(x, (1, -1, 2))
-            d = x_j - x_i
-
-            a_ = tf.math.divide_no_nan(
-                (tf.reshape(m, (-1, 1, 1)) * (d)),
-                tf.reshape(
-                    tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3,
-                    (n_bodies, n_bodies, 1),
-                ),
-            ) - tf.math.divide_no_nan(
-                (tf.reshape(m, (-1, 1, 1)) * (d)),
-                tf.reshape(
-                    tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 5,
-                    (n_bodies, n_bodies, 1),
-                ),
-            )
-            return tf.reduce_sum(a_, axis=0)
-
-    # When two objects collide, their force and weight adds up
+        a_ = tf.math.divide_no_nan(
+            (tf.reshape(m, (-1, 1, 1)) * (d)),
+            tf.clip_by_value(tf.reshape(
+                tf.sqrt(d[:, :, 0] ** 2 + d[:, :, 1] ** 2) ** 3,
+                (n_bodies, n_bodies, 1),
+            ), 1, float("inf")),
+        )
+        return tf.reduce_sum(a_, axis=0)
 
     def sim_runge_kutter(m, x, v, step, n_bodies):
         k0 = step * v
@@ -183,14 +90,6 @@ def main():
         v = v + (1.0 / 6) * (l0 + 2 * l1 + 2 * l2 + l3)
 
         return x, v
-
-    def kill_empty(m, x, v, n):
-        empty = m == 0
-        m = m[~empty]
-        x = x[~empty]
-        v = v[~empty]
-        n = np.sum(~empty)
-        return m, x, v, n
 
     np.set_printoptions(suppress=True)
 
